@@ -4,6 +4,11 @@ var router = express.Router()
 
 // ROUTES FOR API CALLS
 
+// Main URL 
+router.get('/', (req,res)=>{
+    res.send('Did you need a longer URL?');
+})
+
 // /products/list
 router.get('/list', (req,res)=>{
     res.send('PRODUCT LIST!');

@@ -1,4 +1,4 @@
-
+-- psql -U postgres -d products -a -f "/Users/eldamarth/Documents/galvanize/SDC/db/import.sql"
 
 CREATE TABLE IF NOT EXISTS product
 (
