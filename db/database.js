@@ -1,5 +1,5 @@
-const {Pool} = require ('pg');
-const Client = require ('pg-native');
+// const {Pool} = require ('pg');
+const {Client, Pool} = require ('pg').native;
 require ('dotenv').config();
 
 const connectString = process.env.SQL_STRING;

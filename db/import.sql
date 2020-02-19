@@ -1,5 +1,8 @@
 -- psql -U postgres -d products -a -f "/Users/eldamarth/Documents/galvanize/SDC/db/import.sql"
 
+
+-- default_price is a number on my DB, whereas the Greenfield API returns a string.
+
 CREATE TABLE IF NOT EXISTS product
 (
     id SERIAL NOT NULL,
@@ -7,7 +10,7 @@ CREATE TABLE IF NOT EXISTS product
     slogan TEXT,
     description TEXT,
     category VARCHAR(255),
-    default_price INT,
+    default_price VARCHAR(255),
     PRIMARY KEY (id)
 );
 
@@ -23,43 +26,43 @@ CREATE TABLE IF NOT EXISTS related
 CREATE TABLE IF NOT EXISTS styles
 (
     id SERIAL NOT NULL,
-    productId INTEGER,
+    product_id INTEGER,
     name VARCHAR(255),
     sale_price VARCHAR(50),
-    original_price INTEGER,
-    default_style INTEGER,
+    original_price VARCHAR(255),
+    default_style VARCHAR(255),
     PRIMARY KEY (id),
-    FOREIGN KEY (productId) REFERENCES product(id)
+    FOREIGN KEY (product_id) REFERENCES product(id)
 );
 
 CREATE TABLE IF NOT EXISTS skus
 (
     id SERIAL NOT NULL,
-    styleId INTEGER,
+    style_id INTEGER,
     size VARCHAR(50),
     quantity INTEGER,
     PRIMARY KEY (id),
-    FOREIGN KEY (styleId) REFERENCES styles(id)
+    FOREIGN KEY (style_id) REFERENCES styles(id)
 );
 
 CREATE TABLE IF NOT EXISTS photos
 (
     id SERIAL NOT NULL,
-    styleId INTEGER,
+    style_id INTEGER,
     url TEXT,
     thumbnail_url TEXT,
     PRIMARY KEY (id),
-    FOREIGN KEY (styleId) REFERENCES styles(id)
+    FOREIGN KEY (style_id) REFERENCES styles(id)
 );
 
 CREATE TABLE IF NOT EXISTS features
 (
     id SERIAL NOT NULL,
-    productId INTEGER,
+    product_id INTEGER,
     feature VARCHAR(255),
     value VARCHAR(255),
     PRIMARY KEY (id),
-    FOREIGN KEY (productId) REFERENCES product(id)
+    FOREIGN KEY (product_id) REFERENCES product(id)
 );
 
 \COPY product FROM '/Users/eldamarth/Documents/galvanize/SDC/csv/product.csv' DELIMITER ',' CSV HEADER;

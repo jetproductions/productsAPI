@@ -11,7 +11,6 @@ router.get('/', (req,res)=>{
     res.send('Did you need a longer URL?');
 })
 
-
 // /PRODUCTS/LIST
 // Returns array list of ALL products as objects with keys:
 // 		"id":  NUMBER 
@@ -21,10 +20,10 @@ router.get('/', (req,res)=>{
 // 		"category":  STRING
 // 		"default_price":  STRING
 router.get('/list', (req,res)=>{
-    let query = 'SELECT * FROM public.product WHERE id = $1';
-    let params = [1];
+    let query = 'SELECT * FROM product WHERE id < $1';
+    let params = [6];
 client.query(query, params)
-    .then(reply => res.send(reply));
+    .then(reply => res.send(reply.rows));
     // res.send(results)
     // res.send('PRODUCT LIST!');
 })
@@ -52,7 +51,17 @@ client.query(query, params)
 // }
 router.get('/:product_id/', (req,res)=>{
     // if (req.params.id !== )
-    res.send(`PRODUCT ${req.params.product_id} INFO!`);
+    let product;
+    // let query1 = 'SELECT * FROM product WHERE id = $1';
+    // let query2 = 'SELECT * FROM features WHERE product_id = $1';
+    let query3 = 'SELECT product.id, product.name, product.slogan, product.description, product.category, product.default_price,features.value,features.feature FROM product INNER JOIN features ON product.id = features.product_id WHERE product.id=$1'
+    let params = [req.params.product_id];
+    client.query(query3, params)
+    .then (response => product = response)
+    .catch ((err)=> console.error(err))
+    .then(() => res.send(product.rows))
+    .catch( (err) => console.error(err))
+    
 })
 
 //  /PRODUCTS/:PRODUCT_ID/STYLES
