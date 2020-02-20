@@ -1,7 +1,4 @@
--- psql -U postgres -d products -a -f "/Users/eldamarth/Documents/galvanize/SDC/db/import.sql"
-
-
--- default_price is a number on my DB, whereas the Greenfield API returns a string.
+--COMMAND TO RUN THIS SCRIPT IN TERMINAL: psql -U postgres -d greenfield -a -f "/Users/eldamarth/Documents/galvanize/SDC/db/import.sql"
 
 CREATE TABLE IF NOT EXISTS product
 (
@@ -76,3 +73,5 @@ CREATE TABLE IF NOT EXISTS features
 \COPY photos FROM '/Users/eldamarth/Documents/galvanize/SDC/csv/photos.csv' DELIMITER ',' CSV HEADER;
 
 \COPY features FROM '/Users/eldamarth/Documents/galvanize/SDC/csv/features.csv' DELIMITER ',' CSV HEADER;
+
+-- \COPY features from '/Users/eldamarth/Documents/galvanize/SDC/csv/newFeatures.csv' DELIMITER ',' CSV HEADER;

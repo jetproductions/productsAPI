@@ -54,9 +54,9 @@ router.get('/:product_id/', (req,res)=>{
     let product;
     // let query1 = 'SELECT * FROM product WHERE id = $1';
     // let query2 = 'SELECT * FROM features WHERE product_id = $1';
-    let query3 = 'SELECT product.id, product.name, product.slogan, product.description, product.category, product.default_price,features.value,features.feature FROM product INNER JOIN features ON product.id = features.product_id WHERE product.id=$1'
+    let query = 'SELECT product.id, product.name, product.slogan, product.description, product.category, product.default_price,features.value,features.feature FROM public.product INNER JOIN public.features ON product.id = features.product_id WHERE product.id=$1'
     let params = [req.params.product_id];
-    client.query(query3, params)
+    client.query(query, params)
     .then (response => product = response)
     .catch ((err)=> console.error(err))
     .then(() => res.send(product.rows))
