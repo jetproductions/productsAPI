@@ -20,6 +20,7 @@ router.get('/', (req,res)=>{
 // 		"category":  STRING
 // 		"default_price":  STRING
 router.get('/list', (req,res)=>{
+    console.log("Request for Product List");
     let query = 'SELECT * FROM product WHERE id < $1';
     let params = [6];
 client.query(query, params)
@@ -51,17 +52,23 @@ client.query(query, params)
 // }
 router.get('/:product_id/', (req,res)=>{
     // if (req.params.id !== )
+    console.log("Request for Product Info on Product #"+req.params.product_id);
     let product;
-    // let query1 = 'SELECT * FROM product WHERE id = $1';
-    // let query2 = 'SELECT * FROM features WHERE product_id = $1';
-    let query = 'SELECT product.id, product.name, product.slogan, product.description, product.category, product.default_price,features.value,features.feature FROM public.product INNER JOIN public.features ON product.id = features.product_id WHERE product.id=$1'
+    let query1 = 'SELECT * FROM product WHERE id = $1';
+    let query2 = 'SELECT feature, value FROM features WHERE product_id = $1';
+    // let query = 'SELECT product.id, product.name, product.slogan, product.description, product.category, product.default_price,features.value,features.feature FROM public.product INNER JOIN public.features ON product.id = features.product_id WHERE product.id=$1'
     let params = [req.params.product_id];
-    client.query(query, params)
-    .then (response => product = response)
+    client.query(query1, params)
+    .then (response => product = response.rows[0])
     .catch ((err)=> console.error(err))
-    .then(() => res.send(product.rows))
-    .catch( (err) => console.error(err))
-    
+    .then (() => {
+        client.query(query2, params)
+        .then (response => product["features"] = response.rows)
+        .catch(err => console.error(err))
+        .then(() => res.send(product))
+        .catch ((err)=> console.error(err))
+    })
+    .catch ((err)=> console.error(err))
 })
 
 //  /PRODUCTS/:PRODUCT_ID/STYLES
@@ -86,13 +93,13 @@ router.get('/:product_id/', (req,res)=>{
 // 					"url": STRING
 // 				}
 // 			],
-// 		"skus": {
-// 			"XS": NUMBER
-// 			"S": NUMBER
-// 			"M": NUMBER
-// 			"L": NUMBER
-// 			"XL": NUMBER
-// 		}
+// 		    "skus": {
+// 		    	"XS": NUMBER
+// 		    	"S": NUMBER
+// 		    	"M": NUMBER
+// 		    	"L": NUMBER
+// 		    	"XL": NUMBER
+// 	    	}
 // 	},
 //   {
 // 		"style_id": NUMBER
@@ -117,14 +124,59 @@ router.get('/:product_id/', (req,res)=>{
 // 	},
 // }
 router.get('/:product_id/styles', (req,res)=>{
-    res.send(`PRODUCT ${req.params.product_id} STYLES!`);
+    console.log("Request for Product Styles on Product #"+req.params.product_id);
+    let stylesQuery = `SELECT id,name,original_price,sale_price,default_style FROM styles WHERE product_id=${req.params.product_id};`;
+    let photosQuery = 'SELECT url, thumbnail_url FROM photos WHERE style_id=$1;';
+    let skusQuery = 'SELECT size, quantity FROM skus WHERE style_id=$1;';
+
+    let returnObj = {
+        product_id: req.params.product_id.toString(),
+        results: [],
+    }
+
+    let params = [req.params.product_id];
+    client.query(stylesQuery)
+    .then (response => response.rows.map((style)=>{
+        let photos;
+        let skus;
+        let params =[style.id];
+        client.query(photosQuery,params)
+        .then(res => photos = res.rows)
+        .catch(err => console.error(err))
+        
+        client.query(skusQuery, params)
+        .then(res => skus=res.rows)
+        .catch(err => console.error(err))
+        
+        return {
+            style_id: style.id,
+            name: style.name,
+            original_price:style.original_price,
+            sale_price:style.sale_price,
+            "default?":style.default_style,
+            photos:photos,
+            skus:skus,
+        }
+    
+    }))
+    .then(output => {
+        returnObj.results.push(output)
+        res.send(returnObj)
+    });
+    
+    // res.send(`PRODUCT ${req.params.product_id} STYLES!`);
 })
 
 //  /products/:product_id/related
 // returns a list of related products as numbers in an array with format:
 // [ NUMBER, NUMBER, NUMBER, NUMBER ]
 router.get('/:product_id/related', (req,res)=>{
-    res.send(`PRODUCT !`);
+    console.log("Request for Related Products on Product #"+req.params.product_id);
+    let query = 'SELECT related_product_id FROM related WHERE current_product_id=$1;';
+    let params = [req.params.product_id];
+
+    client.query(query, params)
+    .then(reply => res.send(reply.rows.map(item=>item.related_product_id)));
 })
 
 module.exports = router;
