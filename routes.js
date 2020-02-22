@@ -125,7 +125,8 @@ router.get('/:product_id/', (req,res)=>{
 // }
 router.get('/:product_id/styles', (req,res)=>{
     console.log("Request for Product Styles on Product #"+req.params.product_id);
-    let stylesQuery = `SELECT id,name,original_price,sale_price,default_style FROM styles WHERE product_id=${req.params.product_id};`;
+
+    let stylesQuery = `SELECT id,name,original_price,sale_price,default_style FROM styles WHERE product_id=${req.params.product_id} ORDER BY id;`;
     let photosQuery = 'SELECT url, thumbnail_url FROM photos WHERE style_id=$1;';
     let skusQuery = 'SELECT size, quantity FROM skus WHERE style_id=$1;';
 
@@ -133,38 +134,39 @@ router.get('/:product_id/styles', (req,res)=>{
         product_id: req.params.product_id.toString(),
         results: [],
     }
-
-    let params = [req.params.product_id];
+   
     client.query(stylesQuery)
-    .then (response => response.rows.map((style)=>{
-        let photos;
-        let skus;
-        let params =[style.id];
-        client.query(photosQuery,params)
-        .then(res => photos = res.rows)
+    .then (response => response.rows)
+    .then (rows => rows.map( style => {
+        let p = [];
+        p.push(style.id);
+
+        let styleCard = {
+                        style_id: style.id,
+                        name: style.name,
+                        original_price:style.original_price,
+                        sale_price:style.sale_price==='0'?"null":style.sale_price,
+                        "default?":style.default_style,
+                        photos:[],
+                        skus:[]
+                    }
+
+        photoProm = client.query(photosQuery,p)
+        skuProm = client.query(skusQuery,p)
+        Promise.all([photoProm,skuProm])
+        .then(x => {
+            let skuArray = (x[1].rows).map(obj => [obj.size,obj.quantity])
+            styleCard.photos = x[0].rows;
+            styleCard.skus = Object.fromEntries(skuArray);
+            return styleCard;
+        })
         .catch(err => console.error(err))
-        
-        client.query(skusQuery, params)
-        .then(res => skus=res.rows)
-        .catch(err => console.error(err))
-        
-        return {
-            style_id: style.id,
-            name: style.name,
-            original_price:style.original_price,
-            sale_price:style.sale_price,
-            "default?":style.default_style,
-            photos:photos,
-            skus:skus,
-        }
-    
+        .then(output => {
+            returnObj.results.push(output)
+            return res.send(returnObj)
+        })
+        .catch(err => console.error)
     }))
-    .then(output => {
-        returnObj.results.push(output)
-        res.send(returnObj)
-    });
-    
-    // res.send(`PRODUCT ${req.params.product_id} STYLES!`);
 })
 
 //  /products/:product_id/related
