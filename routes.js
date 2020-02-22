@@ -129,44 +129,50 @@ router.get('/:product_id/styles', (req,res)=>{
     let stylesQuery = `SELECT id,name,original_price,sale_price,default_style FROM styles WHERE product_id=${req.params.product_id} ORDER BY id;`;
     let photosQuery = 'SELECT url, thumbnail_url FROM photos WHERE style_id=$1;';
     let skusQuery = 'SELECT size, quantity FROM skus WHERE style_id=$1;';
+    let joinQuery = 'SELECT * FROM styles LEFT JOIN skus ON skus.style_id = styles.id LEFT JOIN photos on photos.style_id = styles.id WHERE styles.product_id =$1';
 
     let returnObj = {
         product_id: req.params.product_id.toString(),
         results: [],
     }
    
-    client.query(stylesQuery)
-    .then (response => response.rows)
-    .then (rows => rows.map( style => {
-        let p = [];
-        p.push(style.id);
+    client.query(joinQuery, Array.of(req.params.product_id) )
+    .then(output => output.rows)
+    .then(incomingData => {
+        let repository = {};
+        
+        if (incomingData.length){
+            incomingData.forEach(record =>{
+                if (repository[record.style_id] ){
+                    
+                    repository[record.style_id].skus[record.size]=record.quantity;
 
-        let styleCard = {
-                        style_id: style.id,
-                        name: style.name,
-                        original_price:style.original_price,
-                        sale_price:style.sale_price==='0'?"null":style.sale_price,
-                        "default?":style.default_style,
-                        photos:[],
-                        skus:[]
+                    repository[record.style_id].photos[record.url] = {url:record.url, thumbnail_url: record.thumbnail_url};
+
+                } else {
+                    repository[record.style_id] = {
+                        style_id:record.style_id,
+                        name:record.name,
+                        original_price:record.original_price,
+                        sale_price: record.sale_price==="null"?"0":record.sale_price,
+                        'default?':parseInt(record.default_style),
+                        photos:{},
+                        skus:{}
                     }
-
-        photoProm = client.query(photosQuery,p)
-        skuProm = client.query(skusQuery,p)
-        Promise.all([photoProm,skuProm])
-        .then(x => {
-            let skuArray = (x[1].rows).map(obj => [obj.size,obj.quantity])
-            styleCard.photos = x[0].rows;
-            styleCard.skus = Object.fromEntries(skuArray);
-            return styleCard;
-        })
-        .catch(err => console.error(err))
-        .then(output => {
-            returnObj.results.push(output)
-            return res.send(returnObj)
-        })
-        .catch(err => console.error)
-    }))
+                    repository[record.style_id].photos[record.url]={url:record.url, thumbnail_url:record.thumbnail_url}
+                    repository[record.style_id].skus[record.size]= record.quantity;
+                }
+            })
+            Object.keys(repository).forEach( key =>
+                {
+                    repository[key].photos = Object.values(repository[key].photos);
+                }
+            )
+        }
+        return repository;
+    })
+    .then(collection => {returnObj.results = Object.values(collection); return returnObj})
+    .then(output => res.send(output))
 })
 
 //  /products/:product_id/related
