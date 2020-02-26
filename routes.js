@@ -1,8 +1,12 @@
 var express = require('express')
 var router = express.Router()
-var client = require ('./db/database');
+const connectString = process.env.SQL_STRING;
+const Pool = require ('pg-pool');
 require ('dotenv').config();
 
+const pool = new Pool({
+        connectionString : connectString,
+    });
 
 // ROUTES FOR API CALLS
 
@@ -23,10 +27,10 @@ router.get('/list', (req,res)=>{
     console.log("Request for Product List");
     let query = 'SELECT * FROM product WHERE id < $1';
     let params = [6];
-client.query(query, params)
-    .then(reply => res.send(reply.rows));
-    // res.send(results)
-    // res.send('PRODUCT LIST!');
+    pool
+    .query(query, params)
+    .then(reply => res.send(reply.rows))
+  
 })
 
 
@@ -58,11 +62,12 @@ router.get('/:product_id/', (req,res)=>{
     let query2 = 'SELECT feature, value FROM features WHERE product_id = $1';
     // let query = 'SELECT product.id, product.name, product.slogan, product.description, product.category, product.default_price,features.value,features.feature FROM public.product INNER JOIN public.features ON product.id = features.product_id WHERE product.id=$1'
     let params = [req.params.product_id];
-    client.query(query1, params)
+    pool
+    .query(query1, params)
     .then (response => product = response.rows[0])
     .catch ((err)=> console.error(err))
     .then (() => {
-        client.query(query2, params)
+        pool.query(query2, params)
         .then (response => product["features"] = response.rows)
         .catch(err => console.error(err))
         .then(() => res.send(product))
@@ -126,27 +131,22 @@ router.get('/:product_id/', (req,res)=>{
 router.get('/:product_id/styles', (req,res)=>{
     console.log("Request for Product Styles on Product #"+req.params.product_id);
 
-    let stylesQuery = `SELECT id,name,original_price,sale_price,default_style FROM styles WHERE product_id=${req.params.product_id} ORDER BY id;`;
-    let photosQuery = 'SELECT url, thumbnail_url FROM photos WHERE style_id=$1;';
-    let skusQuery = 'SELECT size, quantity FROM skus WHERE style_id=$1;';
-    let joinQuery = 'SELECT * FROM styles LEFT JOIN skus ON skus.style_id = styles.id LEFT JOIN photos on photos.style_id = styles.id WHERE styles.product_id =$1';
+    let joinQuery = 'SELECT * FROM styles LEFT JOIN skus ON skus.style_id = styles.id LEFT JOIN photos ON photos.style_id = styles.id WHERE styles.product_id =$1';
 
     let returnObj = {
         product_id: req.params.product_id.toString(),
         results: [],
     }
    
-    client.query(joinQuery, Array.of(req.params.product_id) )
+    pool
+    .query(joinQuery, Array.of(req.params.product_id) )
     .then(output => output.rows)
     .then(incomingData => {
         let repository = {};
-        
         if (incomingData.length){
             incomingData.forEach(record =>{
                 if (repository[record.style_id] ){
-                    
                     repository[record.style_id].skus[record.size]=record.quantity;
-
                     repository[record.style_id].photos[record.url] = {url:record.url, thumbnail_url: record.thumbnail_url};
 
                 } else {
@@ -173,6 +173,7 @@ router.get('/:product_id/styles', (req,res)=>{
     })
     .then(collection => {returnObj.results = Object.values(collection); return returnObj})
     .then(output => res.send(output))
+   
 })
 
 //  /products/:product_id/related
@@ -183,7 +184,8 @@ router.get('/:product_id/related', (req,res)=>{
     let query = 'SELECT related_product_id FROM related WHERE current_product_id=$1;';
     let params = [req.params.product_id];
 
-    client.query(query, params)
+    pool
+    .query(query, params)
     .then(reply => res.send(reply.rows.map(item=>item.related_product_id)));
 })
 
